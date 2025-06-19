@@ -16,7 +16,9 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
-    libwebp-dev
+    libwebp-dev \
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
 # PHP拡張のインストール
 RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath zip

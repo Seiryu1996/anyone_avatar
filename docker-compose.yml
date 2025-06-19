@@ -79,6 +79,8 @@ services:
     networks:
       - avatar_network
     command: tail -f /dev/null
+    ports:
+      - "5173:5173"
 
   # Composer（PHP依存関係管理）
   composer:
