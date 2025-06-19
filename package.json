@@ -1,0 +1,32 @@
+{
+    "$schema": "https://json.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build"
+    },
+    "devDependencies": {
+        "@tailwindcss/vite": "^4.0.0",
+        "autoprefixer": "^10.4.21",
+        "axios": "^1.10.0",
+        "concurrently": "^9.1.2",
+        "laravel-vite-plugin": "^1.2.0",
+        "postcss": "^8.5.6",
+        "tailwindcss": "^4.1.10",
+        "vite": "^6.2.4"
+    },
+    "dependencies": {
+        "@headlessui/react": "^2.2.4",
+        "@heroicons/react": "^2.2.0",
+        "@mediapipe/camera_utils": "^0.3.1675466862",
+        "@mediapipe/face_mesh": "^0.4.1633559619",
+        "@vitejs/plugin-react": "^4.5.2",
+        "laravel-echo": "^2.1.6",
+        "pusher-js": "^8.4.0",
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
+        "react-router-dom": "^7.6.2",
+        "react-webcam": "^7.2.0"
+    }
+}
