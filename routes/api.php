@@ -2,13 +2,18 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\{
-    AuthController,
-    AvatarController,
-    StreamController,
-    PostController,
-    UserController
-};
+// use App\Http\Controllers\Api\{
+//     AuthController,
+//     AvatarController,
+//     StreamController,
+//     PostController,
+//     UserController
+// };
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AvatarController;
+use App\Http\Controllers\Api\StreamController;
+use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\UserController;
 
 // 認証
 Route::post('/register', [AuthController::class, 'register']);
