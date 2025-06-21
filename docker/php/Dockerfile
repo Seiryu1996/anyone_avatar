@@ -27,8 +27,20 @@ RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath zip
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install gd
 
+# OPcacheのインストール
+RUN docker-php-ext-install opcache
+
 # Composerのインストール
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+RUN mkdir -p /var/log/php-fpm && \
+    touch /var/log/php-fpm/www-slow.log && \
+    chown -R www-data:www-data /var/log/php-fpm && \
+    chmod -R 755 /var/log/php-fpm
+
+# PHP-FPM設定をコピー
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php/php.ini /usr/local/etc/php/php.ini
 
 # ユーザーの作成
 RUN groupadd -g 1000 www

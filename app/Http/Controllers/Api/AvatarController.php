@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Encoders\PngEncoder;
 
 class AvatarController extends Controller
 {
@@ -25,10 +27,12 @@ class AvatarController extends Controller
         // S3に保存
         Storage::disk('s3')->put($imageName, base64_decode($image), 'public');
         // サムネイル作成
-        $img = Image::make(base64_decode($image));
+        $manager = new ImageManager(new Driver());
+        $img = $manager->read(base64_decode($image));
         $img->resize(200, 200);
         $thumbnailName = 'avatars/thumb_' . $user->id . '_' . time() . '.png';
-        Storage::disk('s3')->put($thumbnailName, $img->encode('png'), 'public');
+        $encodedImage = $img->encode(new PngEncoder());
+        Storage::disk('s3')->put($thumbnailName, (string) $encodedImage, 'public');
         // ユーザー情報更新
         $user->update([
             'avatar_image' => Storage::disk('s3')->url($imageName),

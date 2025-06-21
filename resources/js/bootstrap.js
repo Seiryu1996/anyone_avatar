@@ -31,7 +31,7 @@ const authToken = localStorage.getItem('auth_token');
 if (authToken) {
     window.axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
 }
-
+pageYOffset
 // レスポンスインターセプター
 window.axios.interceptors.response.use(
     response => response,

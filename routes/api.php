@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\AvatarController;
 use App\Http\Controllers\Api\StreamController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\CommentController;
 
 // 認証
 Route::post('/register', [AuthController::class, 'register']);
@@ -44,6 +45,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/posts', [PostController::class, 'store']);
     Route::post('/posts/{post}/like', [PostController::class, 'like']);
     Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+    Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
 
     // ユーザー
     Route::get('/users/{user:username}', [UserController::class, 'profile']);
