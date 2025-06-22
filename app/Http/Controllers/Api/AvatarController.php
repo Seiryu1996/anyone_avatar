@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\PngEncoder;
+use Illuminate\Support\Facades\Log;
 
 class AvatarController extends Controller
 {
@@ -32,10 +33,20 @@ class AvatarController extends Controller
         $img->resize(200, 200);
         $thumbnailName = 'avatars/thumb_' . $user->id . '_' . time() . '.png';
         $encodedImage = $img->encode(new PngEncoder());
-        Storage::disk('s3')->put($thumbnailName, (string) $encodedImage, 'public');
+        $isUploadSuccess = Storage::disk('s3')->put($thumbnailName, (string) $encodedImage, 'public');
+
+        if (!$isUploadSuccess) {
+            Log::error("S3へのアップロードに失敗しました: {$thumbnailName}");
+            return response()->json([
+                'message' => '画像のアップロードに失敗しました',
+            ], 500);
+        }
+        $url = Storage::disk('s3')->url($imageName);
+        Log::info("S3に画像アップロード成功: {$thumbnailName}");
+        Log::info("アップロード後の画像URL: {$url}");
         // ユーザー情報更新
         $user->update([
-            'avatar_image' => Storage::disk('s3')->url($imageName),
+            'avatar_image' => $url,
         ]);
 
         return response()->json([
