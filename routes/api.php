@@ -54,4 +54,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/{user}/follow', [UserController::class, 'follow']);
     Route::get('/users/{user}/followers', [UserController::class, 'followers']);
     Route::get('/users/{user}/following', [UserController::class, 'following']);
+    Route::put('/user/profile', [UserController::class, 'updateProfile']);
 });

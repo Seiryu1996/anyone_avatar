@@ -8,6 +8,9 @@ import Dashboard from './pages/Dashboard';
 import AvatarCreate from './pages/AvatarCreate';
 import StreamList from './pages/StreamList';
 import StreamView from './pages/StreamView';
+import StreamStart from './pages/StreamStart';
+import PostNew from './pages/PostNew';
+import ProfileEdit from './pages/ProfileEdit';
 
 function App() {
     return (
@@ -20,6 +23,9 @@ function App() {
                 <Route path="avatar/create" element={<AvatarCreate />} />
                 <Route path="streams" element={<StreamList />} />
                 <Route path="streams/:id" element={<StreamView />} />
+                <Route path="stream/start" element={<StreamStart />} />
+                <Route path="posts/new" element={<PostNew />} />
+                <Route path="profile/edit" element={<ProfileEdit />} />
             </Route>
         </Routes>
     );
