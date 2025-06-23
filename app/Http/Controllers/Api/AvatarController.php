@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\S3UploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
@@ -11,27 +12,38 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Encoders\PngEncoder;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * アバターコントローラー
+ *
+ * ユーザーのアバター画像のキャプチャ、保存、設定更新を行う
+ *
+ * @category Description
+ * @package  App\Http\Controllers\Api
+ * @author   Seiryu Uehata <seiryu.uehata@gmail.com>
+ * @license  MIT https://opensource.org/license/mit/
+ * @link     http://example.com
+ */
 class AvatarController extends Controller
 {
-    public function s3Put($name, $content, $visibility = 'public')
+    private $s3Service;
+
+    /**
+     * AvatarController constructor.
+     *
+     * @param S3UploadService $s3Service S3アップロードサービス
+     */
+    public function __construct(S3UploadService $s3Service)
     {
-        $isUpload = false;
-        try {
-            $isUpload = Storage::disk('s3')->put($name, $content, $visibility);
-        } catch (\Exception $e) {
-            $logMessage = "S3へのアップロードに失敗しました: {$name}, エラー: {$e->getMessage()}";
-            Log::error($logMessage);
-            throw new \Exception($logMessage);
-        }
-        if (!$isUpload) {
-            dd($isUpload);
-            $logMessage = "S3へのアップロードに失敗しました: {$name}";
-            Log::error($logMessage);
-            throw new \Exception($logMessage);
-        }
-        Log::info("S3に画像アップロード成功: {$name}");
+        $this->s3Service = $s3Service;
     }
 
+    /**
+     * アバター画像をキャプチャして保存する
+     *
+     * @param Request $request リクエスト
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function capture(Request $request)
     {
         $request->validate([
@@ -46,7 +58,11 @@ class AvatarController extends Controller
         $imageName = 'avatars/' . $user->id . '_' . time() . '.png';
         // S3に保存
         try {
-            $this->s3Put($imageName, base64_decode($image));
+            $result = $this->s3Service->uploadFile($imageName, base64_decode($image), [
+                'ContentType' => 'image/jpeg',
+                'CacheControl' => 'max-age=86400'
+            ]);
+            Log::info("S3に画像アップロード成功: path：{$result['path']} url：{$result['url']}");
         } catch (\Exception $e) {
             return response()->json([
                 'message' => "画像の保存に失敗しました Error：{$e->getMessage()}",
@@ -59,18 +75,19 @@ class AvatarController extends Controller
         $thumbnailName = 'avatars/thumb_' . $user->id . '_' . time() . '.png';
         $encodedImage = $img->encode(new PngEncoder());
         try {
-            $this->s3Put($thumbnailName, (string) $encodedImage);
+            $result = $this->s3Service->uploadFile($thumbnailName, (string) $encodedImage, [
+                'ContentType' => 'image/png',
+                'CacheControl' => 'max-age=86400'
+            ]);
+            Log::info("サムネイル画像アップロード成功: path：{$result['path']} url：{$result['url']}");
         } catch (\Exception $e) {
             return response()->json([
                 'message' => "画像のエンコードに失敗しました: {$e->getMessage()}",
             ], 500);
         }
-        $url = Storage::disk('s3')->url($imageName);
-        Log::info("S3に画像アップロード成功: {$thumbnailName}");
-        Log::info("アップロード後の画像URL: {$url}");
         // ユーザー情報更新
         $user->update([
-            'avatar_image' => $url,
+            'avatar_image' => $result['url'],
         ]);
 
         return response()->json([
@@ -79,6 +96,13 @@ class AvatarController extends Controller
         ]);
     }
 
+    /**
+     * アバター設定を更新する
+     *
+     * @param Request $request リクエスト
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function updateConfig(Request $request)
     {
         $request->validate([
