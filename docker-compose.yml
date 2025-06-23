@@ -21,6 +21,8 @@ services:
       - REDIS_HOST=redis
       - PHP_MEMORY_LIMIT=512M
       - PHP_MAX_EXECUTION_TIME=3600
+    ports:
+      - "9013:9003"
 
   # Nginxウェブサーバー（ポートを8000に変更）
   nginx:

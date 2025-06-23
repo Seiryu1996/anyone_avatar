@@ -13,6 +13,25 @@ use Illuminate\Support\Facades\Log;
 
 class AvatarController extends Controller
 {
+    public function s3Put($name, $content, $visibility = 'public')
+    {
+        $isUpload = false;
+        try {
+            $isUpload = Storage::disk('s3')->put($name, $content, $visibility);
+        } catch (\Exception $e) {
+            $logMessage = "S3へのアップロードに失敗しました: {$name}, エラー: {$e->getMessage()}";
+            Log::error($logMessage);
+            throw new \Exception($logMessage);
+        }
+        if (!$isUpload) {
+            dd($isUpload);
+            $logMessage = "S3へのアップロードに失敗しました: {$name}";
+            Log::error($logMessage);
+            throw new \Exception($logMessage);
+        }
+        Log::info("S3に画像アップロード成功: {$name}");
+    }
+
     public function capture(Request $request)
     {
         $request->validate([
@@ -26,19 +45,24 @@ class AvatarController extends Controller
         $image = str_replace(' ', '+', $image);
         $imageName = 'avatars/' . $user->id . '_' . time() . '.png';
         // S3に保存
-        Storage::disk('s3')->put($imageName, base64_decode($image), 'public');
+        try {
+            $this->s3Put($imageName, base64_decode($image));
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => "画像の保存に失敗しました Error：{$e->getMessage()}",
+            ], 500);
+        }
         // サムネイル作成
         $manager = new ImageManager(new Driver());
         $img = $manager->read(base64_decode($image));
         $img->resize(200, 200);
         $thumbnailName = 'avatars/thumb_' . $user->id . '_' . time() . '.png';
         $encodedImage = $img->encode(new PngEncoder());
-        $isUploadSuccess = Storage::disk('s3')->put($thumbnailName, (string) $encodedImage, 'public');
-
-        if (!$isUploadSuccess) {
-            Log::error("S3へのアップロードに失敗しました: {$thumbnailName}");
+        try {
+            $this->s3Put($thumbnailName, (string) $encodedImage);
+        } catch (\Exception $e) {
             return response()->json([
-                'message' => '画像のアップロードに失敗しました',
+                'message' => "画像のエンコードに失敗しました: {$e->getMessage()}",
             ], 500);
         }
         $url = Storage::disk('s3')->url($imageName);
