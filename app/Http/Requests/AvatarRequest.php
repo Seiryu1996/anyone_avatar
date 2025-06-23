@@ -4,10 +4,24 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * AvatarRequest
+ *
+ * Handles validation for avatar-related requests such as
+ * capturing and updating avatar configurations.
+ *
+ * @category Description
+ * @package  App\Http\Requests
+ * @author   Seiryu Uehata <seiryu.uehata@gmail.com>
+ * @license  MIT https://opensource.org/license/mit/
+ * @link     http://example.com
+ */
 class AvatarRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {
@@ -17,70 +31,45 @@ class AvatarRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string,
+     * \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         $action = $this->route()->getActionMethod();
         return match($action) {
-            'upload' => $this->_uploadRules(),
-            'update' => $this->_updateRules(),
-            'delete' => $this->_deleteRules(),
+            'capture' => $this->_captureRules(),
+            'updateConfig' => $this->_updateConfigRules(),
             default => []
         };
     }
 
     /**
-     * Get the validation rules for updating an avatar.
+     * Get the validation rules for uploading an avatar.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string,
+     * \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    private function _uploadRules(): array
+    private function _captureRules(): array
     {
         return [
-            'avatar' => [
+            'image' => [
                 'required',
-                'file',
-                'image',
-                'mimes:jpeg,jpg,png,gif,webp',
-                'max:10240', // 10MB
-                'dimensions:min_width=100,min_height=100,max_width=2000,max_height=2000'
+                'string',
             ],
-            'user_id' => 'sometimes|integer|exists:users,id',
         ];
     }
 
     /**
      * Get the validation rules for deleting an avatar.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string,
+     * \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    private function _updateRules(): array
+    private function _updateConfigRules(): array
     {
         return [
-            'avatar' => [
-                'sometimes',
-                'file',
-                'image',
-                'mimes:jpeg,jpg,png,gif,webp',
-                'max:10240',
-                'dimensions:min_width=100,min_height=100,max_width=2000,max_height=2000'
-            ],
-            'user_id' => 'required|integer|exists:users,id',
-            'current_avatar_path' => 'sometimes|string',
-        ];
-    }
-
-    /**
-     * Get the validation rules for deleting an avatar.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
-    private function _deleteRules(): array
-    {
-        return [
-            'user_id' => 'required|integer|exists:users,id',
-            'avatar_path' => 'required|string',
+            'config' => 'required|array',
         ];
     }
 
@@ -92,17 +81,12 @@ class AvatarRequest extends FormRequest
     public function messages(): array
     {
         return [
-            // Upload validation
-            'avatar.required' => 'アバター画像を選択してください。',
-            'avatar.file' => 'アップロードされたファイルが無効です。',
-            'avatar.image' => '画像ファイルを選択してください。',
-            'avatar.mimes' => 'JPEG、PNG、GIF、WebP形式の画像を選択してください。',
-            'avatar.max' => 'ファイルサイズは10MB以下にしてください。',
-            'avatar.dimensions' => '画像サイズは100x100ピクセル以上、2000x2000ピクセル以下にしてください。',
-            // Common validation
-            'user_id.required' => 'ユーザーIDが必要です。',
-            'user_id.exists' => '指定されたユーザーが見つかりません。',
-            'avatar_path.required' => 'アバターパスが必要です。',
+            // Capture validation
+            'image.required' => '画像データが必要です。',
+            'image.string' => '画像データの形式が正しくありません。',
+            // Update Config validation
+            'config.required' => '設定データが必要です。',
+            'config.array' => '設定データは配列形式である必要があります。',
         ];
     }
 
@@ -115,15 +99,16 @@ class AvatarRequest extends FormRequest
      */
     public function withValidator($validator)
     {
-        $validator->after(function ($validator) {
-            $action = $this->route()->getActionMethod();
-            match($action) {
-                'upload' => $this->_validateUpload($validator),
-                'update' => $this->_validateUpdate($validator),
-                'delete' => $this->_validateDelete($validator),
-                default => null
-            };
-        });
+        $validator->after(
+            function ($validator) {
+                $action = $this->route()->getActionMethod();
+                match($action) {
+                    'capture' => $this->_validateCapture($validator),
+                    'updateConfig' => $this->_validateUpdateConfig($validator),
+                    default => null
+                };
+            }
+        );
     }
 
     /**
@@ -133,25 +118,22 @@ class AvatarRequest extends FormRequest
      *
      * @return void
      */
-    private function _validateUpload($validator)
+    private function _validateCapture($validator)
     {
-        if ($this->hasFile('avatar')) {
-            $file = $this->file('avatar');
-            // check if the file is an image
-            if ($file->getClientOriginalExtension() !== 'gif') {
-                $image = getimagesize($file->getPathname());
-                if ($image) {
-                    $ratio = $image[0] / $image[1];
-                    if ($ratio < 0.5 || $ratio > 2.0) {
-                        $validator->errors()->add('avatar', '画像の縦横比は1:2から2:1の範囲内にしてください。');
-                    }
+        $imageData = $this->input('image');
+        if ($imageData) {
+            // check if the image data is a valid base64 encoded string
+            if (is_string($imageData)) {
+                // confirm that the string is a valid base64 encoded image
+                $base64Data = preg_replace('/^data:image\/[a-zA-Z]+;base64,/', '', $imageData);
+                if (!base64_decode($base64Data, true)) {
+                    $validator->errors()->add('image', '画像データの形式が正しくありません。');
                 }
-            }
-
-            // check if the file name contains invalid characters
-            $originalName = $file->getClientOriginalName();
-            if (preg_match('/[^\w\-_\.]/', $originalName)) {
-                $validator->errors()->add('avatar', 'ファイル名に使用できない文字が含まれています。');
+                // check if the image size exceeds 5MB
+                $decodedData = base64_decode($base64Data);
+                if (strlen($decodedData) > 5 * 1024 * 1024) { // 5MB
+                    $validator->errors()->add('image', 'ファイルサイズは5MB以下にしてください。');
+                }
             }
         }
     }
@@ -163,63 +145,16 @@ class AvatarRequest extends FormRequest
      *
      * @return void
      */
-    private function _validateUpdate($validator)
+    private function _validateUpdateConfig($validator)
     {
-        // check if the user_id matches the authenticated user
-        if ($this->input('user_id') && auth()->id() !== (int)$this->input('user_id')) {
-            // if the authenticated user is not an admin, add an error
-            if (!auth()->user()->hasRole('admin')) {
-                $validator->errors()->add('user_id', '他のユーザーのアバターは変更できません。');
+        $config = $this->input('config');
+        if (is_array($config)) {
+            foreach ($config as $key => $value) {
+                $allowedKeys = ['width', 'height', 'quality', 'format'];
+                if (!in_array($key, $allowedKeys)) {
+                    $validator->errors()->add("config.{$key}", "許可されていない設定項目です。");
+                }
             }
         }
-    }
-
-    /**
-     * Validate the delete request.
-     *
-     * @param \Illuminate\Contracts\Validation\Validator $validator instance
-     *
-     * @return void
-     */
-    private function _validateDelete($validator)
-    {
-        // check if the user_id matches the authenticated user
-        $userId = $this->input('user_id');
-        if ($userId && auth()->id() !== (int)$userId) {
-            if (!auth()->user()->hasRole('admin')) {
-                $validator->errors()->add('user_id', '他のユーザーのアバターは削除できません。');
-            }
-        }
-    }
-
-    /**
-     * Get the validated data from the request.
-     *
-     * @param string|null $key The key to retrieve from the validated data.
-     * @param mixed $default The default value if the key does not exist.
-     *
-     * @return array<string, mixed>
-     */
-    public function validated($key = null, $default = null)
-    {
-        $validated = parent::validated($key, $default);
-        // if user_id is not specified, use the authenticated user's ID
-        if (!isset($validated['user_id'])) {
-            $validated['user_id'] = auth()->id();
-        }
-        return $validated;
-    }
-
-    /**
-     * Get the user ID from the request.
-     *
-     * This method checks the request input for 'user_id', falls back to the route parameter 'userId',
-     * and finally defaults to the authenticated user's ID if neither is provided.
-     *
-     * @return int The user ID.
-     */
-    public function getUserId(): int
-    {
-        return $this->input('user_id') ?? $this->route('userId') ?? auth()->id();
     }
 }
