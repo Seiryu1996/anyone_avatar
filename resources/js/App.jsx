@@ -11,6 +11,7 @@ import StreamView from './pages/StreamView';
 import StreamStart from './pages/StreamStart';
 import PostNew from './pages/PostNew';
 import ProfileEdit from './pages/ProfileEdit';
+import '../css/app.css';
 
 function App() {
     return (
